@@ -1,0 +1,14 @@
+services:
+  clearing:
+    image: ghcr.io/laplusdestiny/clearing:latest
+    build: .
+    container_name: clearing-app
+    ports:
+      - "${PORT:-8550}:8550"
+    environment:
+      - CONFIG_PATH=/app/config.json
+      - CREDENTIALS_PATH=/app/credentials.json
+    volumes:
+      - ./credentials.json:/app/credentials.json:ro
+      - ./config.json:/app/config.json:rw
+    restart: unless-stopped

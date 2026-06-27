@@ -22,8 +22,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ClearingApp")
 
-# Config file location
-CONFIG_FILE = 'config.json'
+# Config and Credentials file locations
+CONFIG_FILE = os.getenv('CONFIG_PATH', 'config.json')
+CREDENTIALS_FILE = os.getenv('CREDENTIALS_PATH', 'credentials.json')
 
 def load_config():
     """Load configuration from local JSON file."""
@@ -53,18 +54,18 @@ def save_config(spreadsheet_key, sheet_name=""):
         logger.exception("Failed to save config file: %s", CONFIG_FILE)
 
 def get_service_account_email():
-    """Retrieve the client email from credentials.json if it exists."""
-    if os.path.exists('credentials.json'):
+    """Retrieve the client email from credentials file if it exists."""
+    if os.path.exists(CREDENTIALS_FILE):
         try:
-            with open('credentials.json', 'r', encoding='utf-8') as f:
+            with open(CREDENTIALS_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 email = data.get('client_email', '')
-                logger.info("Service account email retrieved from credentials.json: %s", email)
+                logger.info("Service account email retrieved from %s: %s", CREDENTIALS_FILE, email)
                 return email
         except Exception as e:
-            logger.exception("Failed to parse credentials.json")
+            logger.exception("Failed to parse %s", CREDENTIALS_FILE)
     else:
-        logger.warning("credentials.json does not exist. Cannot retrieve service account email.")
+        logger.warning("%s does not exist. Cannot retrieve service account email.", CREDENTIALS_FILE)
     return ''
 
 def parse_spreadsheet_key(input_str):
@@ -80,7 +81,7 @@ def fetch_data(spreadsheet_key, sheet_name=""):
     """Fetch raw values from Google Spreadsheet using credentials.json."""
     logger.info("Attempting to fetch data from spreadsheet. Key: %s, Sheet Name: %s", spreadsheet_key, sheet_name)
     try:
-        gc = gspread.service_account(filename='credentials.json')
+        gc = gspread.service_account(filename=CREDENTIALS_FILE)
         sh = gc.open_by_key(spreadsheet_key)
         if sheet_name:
             worksheet = sh.worksheet(sheet_name)
@@ -308,7 +309,7 @@ def main(page: ft.Page):
         page.update()
         
         # 1. Credentials Check
-        if not os.path.exists('credentials.json'):
+        if not os.path.exists(CREDENTIALS_FILE):
             show_setup_view()
             return
             
@@ -351,7 +352,7 @@ def main(page: ft.Page):
     def show_setup_view(error_message=""):
         page.clean()
         
-        creds_exist = os.path.exists('credentials.json')
+        creds_exist = os.path.exists(CREDENTIALS_FILE)
         service_email = get_service_account_email() if creds_exist else ""
         
         config = load_config()
@@ -365,7 +366,7 @@ def main(page: ft.Page):
                 ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.ERROR_OUTLINE, color=ft.Colors.RED_ACCENT, size=24),
-                        ft.Text("credentials.json がフォルダに見つかりません", color=ft.Colors.RED_ACCENT, weight=ft.FontWeight.BOLD, size=14)
+                        ft.Text(f"{CREDENTIALS_FILE} がフォルダに見つかりません", color=ft.Colors.RED_ACCENT, weight=ft.FontWeight.BOLD, size=14)
                     ]),
                     bgcolor="#3A1D1D",
                     padding=12,
@@ -420,7 +421,7 @@ def main(page: ft.Page):
                 ft.Column([
                     ft.Text("1. API認証ファイルの配置", weight=ft.FontWeight.BOLD, size=14),
                     ft.Text("Google Cloud Console でサービスアカウントの鍵 (JSON) を生成し、", size=12, color=ft.Colors.GREY_400),
-                    ft.Text("ファイル名を 'credentials.json' として本アプリと同じフォルダに置いてください。", size=12, color=ft.Colors.GREY_400)
+                    ft.Text(f"ファイルを '{CREDENTIALS_FILE}' として配置してください。", size=12, color=ft.Colors.GREY_400)
                 ], spacing=2, expand=True)
             ], vertical_alignment=ft.CrossAxisAlignment.START)
         )
@@ -456,7 +457,7 @@ def main(page: ft.Page):
             setup_steps.append(
                 ft.Row([
                     ft.Icon(ft.Icons.RADIO_BUTTON_UNCHECKED, color=ft.Colors.GREY_500, size=24),
-                    ft.Text("2. credentials.jsonの配置後に表示されるメールアドレスにシートを共有します。", size=13, color=ft.Colors.GREY_500)
+                    ft.Text(f"2. {CREDENTIALS_FILE}の配置後に表示されるメールアドレスにシートを共有します。", size=13, color=ft.Colors.GREY_500)
                 ])
             )
             

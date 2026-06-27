@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "flet>=0.85.3",
+    "flet[web]>=0.85.3",
     "gspread>=6.2.1",
     "pandas>=3.0.3",
 ]
