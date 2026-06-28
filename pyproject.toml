@@ -1,8 +1,7 @@
 [project]
 name = "clearing"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+version = "1.0.0"
+description = "A Flet-based web application to calculate and clear shared expenses fetched from Google Spreadsheets"
 requires-python = ">=3.11"
 dependencies = [
     "flet[web]>=0.85.3",
