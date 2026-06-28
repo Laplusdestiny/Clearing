@@ -234,7 +234,14 @@ def calculate_settlement(df, selected_month):
     a_exp = expense_df[expense_df['paid_by'] == 'とおる']['amount'].sum()
     b_exp = expense_df[expense_df['paid_by'] == 'りお']['amount'].sum()
     
-    # Calculate total pool income and total expenses
+    # Calculate cumulative data up to the selected month
+    until_selected_df = df[df['billing_month'] <= selected_month]
+    is_income_until_selected = until_selected_df['tx_type'] == '収入'
+    cumulative_inc = until_selected_df[is_income_until_selected]['amount'].sum()
+    cumulative_exp = until_selected_df[~is_income_until_selected]['amount'].sum()
+    cumulative_remaining = cumulative_inc - cumulative_exp
+    
+    # Calculate total pool income and total expenses for selected month
     total_inc = a_inc + b_inc
     total_exp = a_exp + b_exp
     
@@ -275,6 +282,9 @@ def calculate_settlement(df, selected_month):
         'total_inc': total_inc,
         'total_exp': total_exp,
         'remaining_pool': total_inc - total_exp,
+        'cumulative_inc': cumulative_inc,
+        'cumulative_exp': cumulative_exp,
+        'cumulative_remaining': cumulative_remaining,
         'ratio_a': ratio_a,
         'ratio_b': ratio_b,
         'burden_a': burden_a,
@@ -776,9 +786,9 @@ def main(page: ft.Page):
         )
 
     def create_pool_card(settlement):
-        total_inc = settlement['total_inc']
-        total_exp = settlement['total_exp']
-        remaining = settlement['remaining_pool']
+        cum_inc = settlement['cumulative_inc']
+        monthly_exp = settlement['total_exp']
+        cum_remaining = settlement['cumulative_remaining']
         
         bg_color = "#112233"  # Deep blue-grey tint
         border_color = ft.Colors.BLUE_800
@@ -786,16 +796,16 @@ def main(page: ft.Page):
         card_content = ft.Row([
             ft.Icon(ft.Icons.ACCOUNT_BALANCE_ROUNDED, color=ft.Colors.BLUE_300, size=28),
             ft.Column([
-                ft.Text("バーチャル共通口座の状況", size=11, color=ft.Colors.BLUE_200, weight=ft.FontWeight.W_500),
+                ft.Text("バーチャル共通口座の状況 (全期間累積残高)", size=11, color=ft.Colors.BLUE_200, weight=ft.FontWeight.W_500),
                 ft.Row([
-                    ft.Text("プール金総額: ", size=12, color=ft.Colors.GREY_400),
-                    ft.Text(f"{total_inc:,}円", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                    ft.Text("累積プール金: ", size=12, color=ft.Colors.GREY_400),
+                    ft.Text(f"{cum_inc:,}円", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
                     ft.Text("  |  ", size=12, color=ft.Colors.GREY_600),
-                    ft.Text("支出合計: ", size=12, color=ft.Colors.GREY_400),
-                    ft.Text(f"{total_exp:,}円", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                    ft.Text("今月の支出合計: ", size=12, color=ft.Colors.GREY_400),
+                    ft.Text(f"{monthly_exp:,}円", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
                     ft.Text("  |  ", size=12, color=ft.Colors.GREY_600),
-                    ft.Text("口座残高: ", size=12, color=ft.Colors.BLUE_200, weight=ft.FontWeight.BOLD),
-                    ft.Text(f"{remaining:,}円", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_100),
+                    ft.Text("現在の口座残高: ", size=12, color=ft.Colors.BLUE_200, weight=ft.FontWeight.BOLD),
+                    ft.Text(f"{cum_remaining:,}円", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_100),
                 ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER, wrap=True)
             ], expand=True, spacing=2)
         ], vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=15)
