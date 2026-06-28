@@ -266,11 +266,11 @@ def calculate_settlement(df, selected_month):
         'transactions': month_df.to_dict('records')
     }
 
-def format_display_time(row):
-    """Format datetime to MM/DD HH:MM for tight display, fallback to raw."""
+def format_display_date(row):
+    """Format datetime to YYYY/MM/DD for display, fallback to raw."""
     dt = row['timestamp_parsed']
     if pd.notna(dt):
-        return dt.strftime('%m/%d %H:%M')
+        return dt.strftime('%Y/%m/%d')
     return str(row['raw_timestamp'])
 
 # --- Flet UI Main App ---
@@ -636,7 +636,7 @@ def main(page: ft.Page):
         
         history_table = ft.DataTable(
             columns=[
-                ft.DataColumn(ft.Text("日時", weight=ft.FontWeight.BOLD, size=13)),
+                ft.DataColumn(ft.Text("日付", weight=ft.FontWeight.BOLD, size=13)),
                 ft.DataColumn(ft.Text("支払者", weight=ft.FontWeight.BOLD, size=13)),
                 ft.DataColumn(ft.Text("カテゴリ/メモ", weight=ft.FontWeight.BOLD, size=13)),
                 ft.DataColumn(ft.Text("金額", weight=ft.FontWeight.BOLD, size=13), numeric=True),
@@ -826,7 +826,7 @@ def main(page: ft.Page):
             rows.append(
                 ft.DataRow(
                     cells=[
-                        ft.DataCell(ft.Text(format_display_time(tx), size=12)),
+                        ft.DataCell(ft.Text(format_display_date(tx), size=12)),
                         ft.DataCell(badge),
                         ft.DataCell(ft.Text(tx['category'], size=12)),
                         ft.DataCell(ft.Text(amount_str, size=12, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.RIGHT))
