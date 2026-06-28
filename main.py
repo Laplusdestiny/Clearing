@@ -234,19 +234,34 @@ def calculate_settlement(df, selected_month):
     a_exp = expense_df[expense_df['paid_by'] == 'とおる']['amount'].sum()
     b_exp = expense_df[expense_df['paid_by'] == 'りお']['amount'].sum()
     
-    total_a = a_inc + a_exp
-    total_b = b_inc + b_exp
+    # Calculate total pool income and total expenses
+    total_inc = a_inc + b_inc
+    total_exp = a_exp + b_exp
     
-    diff = total_a - total_b
+    # Calculate ratios
+    if total_inc > 0:
+        ratio_a = a_inc / total_inc
+        ratio_b = b_inc / total_inc
+    else:
+        ratio_a = 0.5
+        ratio_b = 0.5
+        
+    # Calculate burden amounts (rounding Tooru's share and adjusting Rio's share)
+    burden_a = int(round(total_exp * ratio_a))
+    burden_b = total_exp - burden_a
     
-    if diff > 0:
+    # Calculate differences for settlement
+    diff_a = a_exp - burden_a
+    diff_b = b_exp - burden_b
+    
+    if diff_a > 0:
         sender = 'りお'
         receiver = 'とおる'
-        amount = int(diff / 2)
-    elif diff < 0:
+        amount = int(diff_a)
+    elif diff_a < 0:
         sender = 'とおる'
         receiver = 'りお'
-        amount = int(abs(diff) / 2)
+        amount = int(abs(diff_a))
     else:
         sender = None
         receiver = None
@@ -257,9 +272,15 @@ def calculate_settlement(df, selected_month):
         'b_inc': b_inc,
         'a_exp': a_exp,
         'b_exp': b_exp,
-        'total_a': total_a,
-        'total_b': total_b,
-        'diff': diff,
+        'total_inc': total_inc,
+        'total_exp': total_exp,
+        'remaining_pool': total_inc - total_exp,
+        'ratio_a': ratio_a,
+        'ratio_b': ratio_b,
+        'burden_a': burden_a,
+        'burden_b': burden_b,
+        'diff_a': diff_a,
+        'diff_b': diff_b,
         'sender': sender,
         'receiver': receiver,
         'amount': amount,
@@ -627,6 +648,9 @@ def main(page: ft.Page):
         # 2. Main Action Card
         settlement_card = create_settlement_card(settlement)
         
+        # 2.5 Pool Card
+        pool_card = create_pool_card(settlement)
+        
         # 3. Monthly Summary Cards
         summary_row = create_summary_row(settlement)
         
@@ -664,6 +688,7 @@ def main(page: ft.Page):
                     period_badge,
                     ft.Divider(height=10, color=ft.Colors.GREY_800),
                     settlement_card,
+                    pool_card,
                     ft.Text("今月の負担実績サマリー", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
                     summary_row,
                     ft.Divider(height=15, color=ft.Colors.GREY_800),
@@ -750,16 +775,54 @@ def main(page: ft.Page):
             margin=ft.Margin.only(bottom=5)
         )
 
+    def create_pool_card(settlement):
+        total_inc = settlement['total_inc']
+        total_exp = settlement['total_exp']
+        remaining = settlement['remaining_pool']
+        
+        bg_color = "#112233"  # Deep blue-grey tint
+        border_color = ft.Colors.BLUE_800
+        
+        card_content = ft.Row([
+            ft.Icon(ft.Icons.ACCOUNT_BALANCE_ROUNDED, color=ft.Colors.BLUE_300, size=28),
+            ft.Column([
+                ft.Text("バーチャル共通口座の状況", size=11, color=ft.Colors.BLUE_200, weight=ft.FontWeight.W_500),
+                ft.Row([
+                    ft.Text("プール金総額: ", size=12, color=ft.Colors.GREY_400),
+                    ft.Text(f"{total_inc:,}円", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                    ft.Text("  |  ", size=12, color=ft.Colors.GREY_600),
+                    ft.Text("支出合計: ", size=12, color=ft.Colors.GREY_400),
+                    ft.Text(f"{total_exp:,}円", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                    ft.Text("  |  ", size=12, color=ft.Colors.GREY_600),
+                    ft.Text("口座残高: ", size=12, color=ft.Colors.BLUE_200, weight=ft.FontWeight.BOLD),
+                    ft.Text(f"{remaining:,}円", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_100),
+                ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER, wrap=True)
+            ], expand=True, spacing=2)
+        ], vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=15)
+        
+        return ft.Card(
+            content=ft.Container(
+                content=card_content,
+                padding=15,
+                border_radius=12,
+                bgcolor=bg_color,
+                border=ft.Border.all(1, border_color)
+            ),
+            elevation=4,
+            margin=ft.Margin.only(bottom=5)
+        )
+
     def create_summary_row(settlement):
         a_inc = settlement['a_inc']
         a_exp = settlement['a_exp']
-        total_a = settlement['total_a']
+        ratio_a = settlement['ratio_a']
         
         b_inc = settlement['b_inc']
         b_exp = settlement['b_exp']
-        total_b = settlement['total_b']
+        ratio_b = settlement['ratio_b']
         
-        def build_card(name, inc, exp, total, theme_color, text_accent):
+        def build_card(name, inc, exp, ratio, theme_color):
+            ratio_pct = f"{ratio * 100:.1f}%"
             return ft.Container(
                 content=ft.Column([
                     ft.Row([
@@ -769,17 +832,12 @@ def main(page: ft.Page):
                     ft.Divider(height=8, color=ft.Colors.GREY_800),
                     ft.Row([
                         ft.Text("入金 (収入)", size=12, color=ft.Colors.GREY_400),
-                        ft.Text(f"{inc:,}円", size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500)
+                        ft.Text(f"{inc:,}円 ({ratio_pct})", size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500)
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     ft.Row([
                         ft.Text("立替 (支出)", size=12, color=ft.Colors.GREY_400),
                         ft.Text(f"{exp:,}円", size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500)
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                    ft.Divider(height=6, color=ft.Colors.GREY_800),
-                    ft.Row([
-                        ft.Text("総貢献額", size=12, color=theme_color, weight=ft.FontWeight.BOLD),
-                        ft.Text(f"{total:,}円", size=15, color=text_accent, weight=ft.FontWeight.BOLD)
-                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
                 ], spacing=6),
                 bgcolor="#15191E",
                 border=ft.Border.all(1, ft.Colors.GREY_800),
@@ -788,8 +846,8 @@ def main(page: ft.Page):
                 expand=True
             )
             
-        card_a = build_card("とおる", a_inc, a_exp, total_a, ft.Colors.BLUE_400, ft.Colors.BLUE_200)
-        card_b = build_card("りお", b_inc, b_exp, total_b, ft.Colors.PINK_400, ft.Colors.PINK_200)
+        card_a = build_card("とおる", a_inc, a_exp, ratio_a, ft.Colors.BLUE_400)
+        card_b = build_card("りお", b_inc, b_exp, ratio_b, ft.Colors.PINK_400)
         
         return ft.Row([card_a, card_b], spacing=15)
 
