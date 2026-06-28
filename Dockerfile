@@ -18,6 +18,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 # アプリケーションのコードをコピー
 COPY main.py README.md ./
+COPY assets/ ./assets/
 
 # ポート番号の公開
 EXPOSE 8550
