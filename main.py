@@ -907,4 +907,4 @@ def main(page: ft.Page):
     check_and_load_app()
 
 if __name__ == "__main__":
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0", port=8550)
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0", port=8550, assets_dir="assets")
